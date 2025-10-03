@@ -18,7 +18,6 @@
                             </span>
                         </div>
                     </div>
-                    
                     <div class="cart-item-actions">
                         <span class="cart-item-price">${{ "%.2f"|format(item.subtotal) }}</span>
                         <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="remove-link">Remove</a>
@@ -31,12 +30,73 @@
                     <span>Total</span>
                     <span>${{ "%.2f"|format(total) }}</span>
                 </div>
-                <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-full">
+                <button id="show-payment-modal-btn" class="btn btn-primary btn-full">
                     Proceed to B2B Checkout
-                </a>
+                </button>
             </div>
         {% else %}
             <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
         {% endif %}
     </div>
+
+    <div id="payment-modal-overlay" class="modal-overlay">
+        <div class="payment-modal">
+            <h2>Choose your payment method</h2>
+            <div class="payment-options-list">
+                <div class="payment-option selected" data-method="visa">
+                    <div class="payment-option-logo">
+                        <img src="{{ url_for('static', filename='images/credit-card-logo.svg') }}" alt="Visa Mastercard">
+                    </div>
+                    <p>Pay with credit card</p>
+                </div>
+                <div class="payment-option" data-method="paypal">
+                    <div class="payment-option-logo">
+                        <img src="{{ url_for('static', filename='images/paypal-logo.svg') }}" alt="PayPal">
+                    </div>
+                    <p>Pay in 4x with PayPal</p>
+                </div>
+                <div class="payment-option" data-method="allianz">
+                    <div class="payment-option-logo">
+                        <img src="{{ url_for('static', filename='images/allianz-trade-pay-logo.png') }}" alt="Allianz Trade Pay">
+                    </div>
+                    <p>Delay payment up to 30 days</p>
+                </div>
+            </div>
+            <div class="payment-modal-footer">
+                <button id="cancel-payment-btn" class="btn btn-secondary">Cancel</button>
+                <a href="{{ url_for('checkout') }}" id="confirm-payment-btn" class="btn btn-primary">Confirm</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const showModalBtn = document.getElementById('show-payment-modal-btn');
+            const paymentModal = document.getElementById('payment-modal-overlay');
+            const cancelBtn = document.getElementById('cancel-payment-btn');
+            const paymentOptions = paymentModal.querySelectorAll('.payment-option');
+
+            if (showModalBtn) {
+                showModalBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    paymentModal.classList.add('is-visible');
+                });
+            }
+
+            const hideModal = () => paymentModal.classList.remove('is-visible');
+            
+            cancelBtn.addEventListener('click', hideModal);
+            
+            paymentModal.addEventListener('click', (e) => {
+                if (e.target === paymentModal) hideModal();
+            });
+
+            paymentOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    paymentOptions.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                });
+            });
+        });
+    </script>
 {% endblock %}

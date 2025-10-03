@@ -33,4 +33,36 @@
             </div>
         {% endfor %}
     </div>
+{% if show_popup %}
+<div class="modal-overlay is-visible">
+    <div class="modal-window">
+        <button class="modal-close">&times;</button>
+        <div class="modal-image">
+            <img src="{{ url_for('static', filename='images/banner-final.png') }}" alt="Business professional">
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modalOverlay = document.querySelector('.modal-overlay');
+        const closeModalBtn = document.querySelector('.modal-close');
+
+        if (modalOverlay && closeModalBtn) {
+            // Function to close the modal
+            const closeModal = () => modalOverlay.classList.remove('is-visible');
+
+            // Close when clicking the 'x' button
+            closeModalBtn.addEventListener('click', closeModal);
+
+            // Optional: Close when clicking on the dark background
+            modalOverlay.addEventListener('click', (event) => {
+                if (event.target === modalOverlay) {
+                    closeModal();
+                }
+            });
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

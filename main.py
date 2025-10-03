@@ -203,6 +203,13 @@ def logout():
 
 @app.route('/')
 def index():
+    # Check if we've already shown the pop-up in this session
+    popup_shown = session.get('popup_shown', False)
+    if not popup_shown:
+        # If not, set the flag so it doesn't show again
+        session['popup_shown'] = True
+
+    # Process products to add average ratings
     products_with_ratings = []
     for product in FAKE_PRODUCTS:
         product_copy = product.copy()
@@ -212,9 +219,9 @@ def index():
             avg_rating = 0
         product_copy['avg_rating'] = avg_rating
         products_with_ratings.append(product_copy)
-    return render_template('index.html', products=products_with_ratings)
         
-    return render_template('index.html', products=products_with_ratings)
+    # Pass the initial state of the flag to the template
+    return render_template('index.html', products=products_with_ratings, show_popup=(not popup_shown))
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
