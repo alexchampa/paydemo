@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="cart-container">
+        <h1 class="cart-title">Your Shopping Cart</h1>
+        {% if cart_items %}
+            <div class="cart-items">
+                {% for item in cart_items %}
+                <div class="cart-item">
+                    <div class="cart-item-main">
+                        <div class="cart-item-image">
+                            <img src="{{ url_for('static', filename=item.image) }}" alt="{{ item.name }}">
+                        </div>
+                        <div class="cart-item-details">
+                            <span class="cart-item-name">{{ item.name }}</span>
+                            <span class="cart-item-quantity">
+                                ${{ "%.2f"|format(item.price) }} each (Qty: {{ item.quantity }})
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="cart-item-actions">
+                        <span class="cart-item-price">${{ "%.2f"|format(item.subtotal) }}</span>
+                        <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="remove-link">Remove</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="cart-summary">
+                <div class="cart-total">
+                    <span>Total</span>
+                    <span>${{ "%.2f"|format(total) }}</span>
+                </div>
+                <a href="{{ url_for('checkout') }}" class="btn btn-primary btn-full">
+                    Proceed to B2B Checkout
+                </a>
+            </div>
+        {% else %}
+            <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="product-detail-container">
+        <div class="product-detail-image">
+            <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}">
+        </div>
+        <div class="product-detail-info">
+            <h1 class="product-detail-name">{{ product.name }}</h1>
+            <div class="product-rating-summary">
+                {% for i in range(5) %}
+                    {% if i < avg_rating|round(0, 'floor') %}
+                        <span class="star filled">&#9733;</span>
+                    {% else %}
+                        <span class="star">&#9734;</span>
+                    {% endif %}
+                {% endfor %}
+                <span class="review-count">({{ product.reviews|length }} Reviews)</span>
+            </div>
+            <p class="product-detail-price">${{ "%.2f"|format(product.price) }}</p>
+            <p class="product-detail-description">{{ product.description }}</p>
+            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-primary btn-full">
+                Add to Cart
+            </a>
+        </div>
+    </div>
+
+    <section class="product-reviews-section">
+        <h2>Customer Reviews</h2>
+        {% if product.reviews %}
+            {% for review in product.reviews %}
+                <div class="review-card">
+                    <div class="review-header">
+                        <span class="review-user">{{ review.user }}</span>
+                        <div class="review-stars">
+                            {% for i in range(5) %}
+                                {% if i < review.rating %}
+                                    <span class="star filled">&#9733;</span>
+                                {% else %}
+                                    <span class="star">&#9734;</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <p class="review-comment">{{ review.comment }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No reviews yet for this product. Be the first to leave one!</p>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2B Demo Shop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5z" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <span>DemoCorp</span>
+            </div>
+            <nav>
+                <a href="{{ url_for('index') }}">Products</a>
+                <a href="{{ url_for('view_cart') }}" class="cart-link">Cart 
+                    {% set cart_count = session.get('cart', [])|length %}
+                    {% if cart_count > 0 %}
+                        <span class="cart-badge">{{ cart_count }}</span>
+                    {% endif %}
+                </a>
+                
+                <div class="nav-user-area">
+                    {% if 'username' in session %}
+                        <a href="{{ url_for('profile') }}" class="welcome-user">Hi, {{ session.username }}</a>
+                        <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-secondary">Login</a>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 DemoCorp | B2B Solutions</p>
+        </div>
+    </footer>
+</body>
+</html>

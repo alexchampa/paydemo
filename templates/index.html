@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="product-grid">
+        {% for product in products %}
+            <div class="product-card">
+                <a href="{{ url_for('product_detail', product_id=product.id) }}" class="product-card-main-link">
+                    <div class="product-image">
+                        <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}">
+                    </div>
+                    <h2 class="product-name">{{ product.name }}</h2>
+                </a>
+
+                <div class="product-card-rating">
+                    {% for i in range(5) %}
+                        {% if i < product.avg_rating|round(0, 'floor') %}
+                            <span class="star filled">&#9733;</span>
+                        {% else %}
+                            <span class="star">&#9734;</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <p class="product-description">{{ product.description | truncate(80, True, '...') }}</p>
+                
+                <div class="product-footer">
+                    <p class="product-price">${{ "%.2f"|format(product.price) }}</p>
+                    <div class="product-buttons">
+                        <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-secondary">Add to Cart</a>
+                        <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn">Details</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}
