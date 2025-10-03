@@ -26,13 +26,15 @@
                 {% endfor %}
             </div>
             <div class="cart-summary">
-                <div class="cart-total">
-                    <span>Total</span>
-                    <span>${{ "%.2f"|format(total) }}</span>
+                <div class="cart-summary">
+                    <div class="cart-total">
+                        <span>Total</span>
+                        <span>${{ "%.2f"|format(total) }}</span>
+                    </div>
+                    <button id="show-payment-modal-btn" class="btn btn-primary">
+                        Checkout
+                    </button>
                 </div>
-                <button id="show-payment-modal-btn" class="btn btn-primary btn-full">
-                    Proceed to B2B Checkout
-                </button>
             </div>
         {% else %}
             <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
