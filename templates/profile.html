@@ -29,7 +29,7 @@
                         <th>Order ID</th>
                         <th>Date</th>
                         <th>Status</th>
-                        <th>Total</th>
+                        <th>Payment Method</th> <th>Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,6 +38,7 @@
                         <td>{{ order.id }}</td>
                         <td>{{ order.date }}</td>
                         <td><span class="status-badge status-{{ order.status|lower }}">{{ order.status }}</span></td>
+                        <td>{{ order.get('payment_method', 'N/A') }}</td>
                         <td>${{ "%.2f"|format(order.total) }}</td>
                     </tr>
                     {% endfor %}

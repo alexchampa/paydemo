@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="payment-modal" style="margin: 2rem auto; max-width: 600px;">
+    <h2>We found these companies...</h2>
+    <p style="margin-top: -1rem; margin-bottom: 1.5rem; color: #555;">Please select your company to proceed.</p>
+    <div class="payment-options-list">
+        {% for company in companies %}
+            <a href="{{ url_for('verify_identity', company_name=company.name) }}" class="payment-option company-select">
+                <div style="flex-grow: 1;">
+                    <p style="font-size: 1.1rem; color: #333;">{{ company.name }}</p>
+                    <p style="font-weight: 400; font-size: 0.9rem;">{{ company.address }}</p>
+                </div>
+                <span>&rarr;</span>
+            </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

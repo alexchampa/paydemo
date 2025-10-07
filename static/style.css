@@ -728,3 +728,12 @@ nav a {
     padding-left: 2rem;
     padding-right: 2rem;
 }
+
+.company-select {
+    text-decoration: none;
+    align-items: center;
+}
+.company-select:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}

@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="login-container" style="text-align: center;">
+    <h1>Identity Verification</h1>
+    <p class="login-instructions">
+        To complete your registration for <strong>{{ company_name }}</strong>, you will be redirected to our identity verification partner.
+    </p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary btn-full">Proceed to Verification</a>
+</div>
+{% endblock %}

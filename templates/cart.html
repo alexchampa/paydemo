@@ -45,24 +45,28 @@
         <div class="payment-modal">
             <h2>Choose your payment method</h2>
             <div class="payment-options-list">
-                <div class="payment-option selected" data-method="visa">
-                    <div class="payment-option-logo">
-                        <img src="{{ url_for('static', filename='images/credit-card-logo.svg') }}" alt="Visa Mastercard">
-                    </div>
-                    <p>Pay with credit card</p>
-                </div>
-                <div class="payment-option" data-method="paypal">
-                    <div class="payment-option-logo">
-                        <img src="{{ url_for('static', filename='images/paypal-logo.svg') }}" alt="PayPal">
-                    </div>
-                    <p>Pay in 4x with PayPal</p>
-                </div>
-                <div class="payment-option" data-method="allianz">
+
+                <div class="payment-option selected" data-method="allianz">
                     <div class="payment-option-logo">
                         <img src="{{ url_for('static', filename='images/allianz-trade-pay-logo.png') }}" alt="Allianz Trade Pay">
                     </div>
                     <p>Delay payment up to 30 days</p>
                 </div>
+
+                <div class="payment-option" data-method="ach">
+                    <div class="payment-option-logo">
+                        <img src="{{ url_for('static', filename='images/ach.jpg') }}" alt="Bank ACH">
+                    </div>
+                    <p>ACH/bank transfer</p>
+                </div>
+
+                <div class="payment-option" data-method="visa">
+                    <div class="payment-option-logo">
+                        <img src="{{ url_for('static', filename='images/credit-card-logo.svg') }}" alt="Visa Mastercard">
+                    </div>
+                    <p>Credit card for 3% fee</p>
+                </div>
+
             </div>
             <div class="payment-modal-footer">
                 <button id="cancel-payment-btn" class="btn btn-secondary">Cancel</button>
@@ -72,33 +76,50 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const showModalBtn = document.getElementById('show-payment-modal-btn');
-            const paymentModal = document.getElementById('payment-modal-overlay');
-            const cancelBtn = document.getElementById('cancel-payment-btn');
-            const paymentOptions = paymentModal.querySelectorAll('.payment-option');
+    document.addEventListener('DOMContentLoaded', () => {
+        const showModalBtn = document.getElementById('show-payment-modal-btn');
+        const paymentModal = document.getElementById('payment-modal-overlay');
+        const cancelBtn = document.getElementById('cancel-payment-btn');
+        const confirmBtn = document.getElementById('confirm-payment-btn'); // Get the confirm button
+        const paymentOptions = paymentModal.querySelectorAll('.payment-option');
 
-            if (showModalBtn) {
-                showModalBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    paymentModal.classList.add('is-visible');
-                });
-            }
-
-            const hideModal = () => paymentModal.classList.remove('is-visible');
-            
-            cancelBtn.addEventListener('click', hideModal);
-            
-            paymentModal.addEventListener('click', (e) => {
-                if (e.target === paymentModal) hideModal();
+        if (showModalBtn) {
+            showModalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                paymentModal.classList.add('is-visible');
             });
+        }
 
-            paymentOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    paymentOptions.forEach(opt => opt.classList.remove('selected'));
-                    option.classList.add('selected');
-                });
+        const hideModal = () => paymentModal.classList.remove('is-visible');
+        
+        cancelBtn.addEventListener('click', hideModal);
+        
+        paymentModal.addEventListener('click', (e) => {
+            if (e.target === paymentModal) hideModal();
+        });
+
+        // --- MODIFIED SECTION ---
+        paymentOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                paymentOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                // Get the base URL and the selected method
+                const baseUrl = "{{ url_for('checkout') }}";
+                const selectedMethod = option.dataset.method;
+                
+                // Update the 'Confirm' button's link with the selected method
+                confirmBtn.href = `${baseUrl}?method=${selectedMethod}`;
             });
         });
-    </script>
+        
+        // Set the initial href for the default selected option
+        const initialSelected = document.querySelector('.payment-option.selected');
+        if(initialSelected) {
+             const baseUrl = "{{ url_for('checkout') }}";
+             const selectedMethod = initialSelected.dataset.method;
+             confirmBtn.href = `${baseUrl}?method=${selectedMethod}`;
+        }
+    });
+</script>
 {% endblock %}

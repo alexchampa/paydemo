@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="login-container">
+    <h1>Two-Factor Authentication</h1>
+
+    <div class="login-instructions">
+        <p>For your security, a one-time password has been sent to your device. Please enter the 4-digit code to confirm your payment.</p>
+    </div>
+
+    <form method="post" class="login-form">
+        <div class="form-group">
+            <label for="otp_code">Verification Code</label>
+            <input type="text" id="otp_code" name="otp_code" required maxlength="4" placeholder="_ _ _ _" style="text-align: center; font-size: 1.5rem; letter-spacing: 1rem;">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Verify Payment</button>
+    </form>
+</div>
+{% endblock %}
