@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, session, flash, abort, request
 import random
 from datetime import datetime
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-very-secret-key'
@@ -12,10 +13,7 @@ FAKE_USERS = {
         'company_name': 'John Doe Construction',
         'address': '123 Builder Lane, Los Angeles, CA 90001',
         'credit_limit': 50000.00,
-        'orders': [
-            {'id': 'ORD-1001', 'date': '2025-09-28', 'total': 159.00, 'status': 'Shipped'},
-            {'id': 'ORD-1005', 'date': '2025-10-02', 'total': 49.97, 'status': 'Processing'},
-        ]
+        'orders': []
     },
     'reject': {
         'password': 'password',
@@ -29,9 +27,7 @@ FAKE_USERS = {
         'company_name': 'Fraudulent Fixtures Inc.',
         'address': '789 Shadow St, Los Angeles, CA 90003',
         'credit_limit': 0.00,
-        'orders': [
-            {'id': 'ORD-1002', 'date': '2025-09-29', 'total': 219.00, 'status': 'On Hold'},
-        ]
+        'orders': []
     },
     'otp': {
         'password': 'password',
@@ -163,7 +159,18 @@ FAKE_PRODUCTS = [
     },
 ]
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            flash('You must be logged in to view this page.', 'info')
+            # Redirect to login, passing the page they wanted to visit
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/profile')
+@login_required
 def profile():
     # Make sure user is logged in
     if 'username' not in session:
@@ -187,11 +194,13 @@ def login():
         password = request.form.get('password')
 
         user_data = FAKE_USERS.get(username)
-        # Check if user exists and password is correct
         if user_data and user_data['password'] == password:
             session['username'] = username
             flash(f'Welcome back, {username}!', 'success')
-            return redirect(url_for('index'))
+            
+            # Check for a 'next' page in the URL and redirect there
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index')) # CHANGED
         else:
             flash('Invalid username or password.', 'error')
 
@@ -204,6 +213,7 @@ def logout():
     return redirect(url_for('index'))
 
 @app.route('/')
+@login_required
 def index():
     # Check if we've already shown the pop-up in this session
     popup_shown = session.get('popup_shown', False)
@@ -226,6 +236,7 @@ def index():
     return render_template('index.html', products=products_with_ratings, show_popup=(not popup_shown))
 
 @app.route('/product/<int:product_id>')
+@login_required
 def product_detail(product_id):
     product = next((p for p in FAKE_PRODUCTS if p['id'] == product_id), None)
     
@@ -241,6 +252,7 @@ def product_detail(product_id):
     return render_template('product_detail.html', product=product, avg_rating=avg_rating)
 
 @app.route('/add_to_cart/<int:product_id>')
+@login_required
 def add_to_cart(product_id):
     if 'cart' not in session:
         session['cart'] = []
@@ -252,6 +264,7 @@ def add_to_cart(product_id):
 
 # In your app.py, find the view_cart() function
 @app.route('/cart')
+@login_required
 def view_cart():
     cart_product_ids = session.get('cart', [])
     
@@ -277,6 +290,7 @@ def view_cart():
     return render_template('cart.html', cart_items=cart_products, total=total_price)
 
 @app.route('/remove_from_cart/<int:product_id>')
+@login_required
 def remove_from_cart(product_id):
     if 'cart' in session:
         if product_id in session['cart']:
@@ -288,53 +302,44 @@ def remove_from_cart(product_id):
 
 
 @app.route('/checkout')
+@login_required
 def checkout():
+    if 'username' not in session:
+        flash('Please log in to complete your checkout.', 'info')
+        return redirect(url_for('login', next=url_for('view_cart')))
+
     # Get payment method from URL and store it in the session
     payment_method = request.args.get('method', 'Unknown')
     session['payment_method'] = payment_method
     
     username = session.get('username')
 
-    if not username:
-        # For this demo, a non-logged-in user can check out successfully
-        create_new_order(username)
-        session.pop('cart', None)
-        flash('Success! Your order has been placed.', 'success')
-        return redirect(url_for('index'))
-
-    # --- Custom Logic Based on Username ---
     if username == 'reject':
         flash('Payment Rejected. Your payment method was declined.', 'error')
         return redirect(url_for('view_cart'))
 
     elif username == 'fraud':
-        flash('Fraud Suspected. This transaction has been blocked.', 'error')
-        return redirect(url_for('view_cart'))
+        # Instead of blocking, redirect to identity verification
+        user_data = FAKE_USERS.get(username)
+        company_name = user_data.get('company_name', 'Your Company')
+        flash('For your security, please verify your identity to complete this transaction.', 'info')
+        return redirect(url_for('verify_identity', company_name=company_name))
 
     elif username == 'otp':
-        # The 'otp' user always goes to the verification page
         return redirect(url_for('verify_otp'))
         
     elif username == 'guestcheckout':
-        # --- CONDITIONAL LOGIC FOR GUEST CHECKOUT ---
-        if session.get('payment_method') == 'allianz':
-            # Only start the full verification workflow if Allianz was selected
-            return redirect(url_for('verify_otp'))
-        else:
-            # For all other payment methods (ACH, Credit Card), the transaction succeeds instantly
-            create_new_order(username)
-            session.pop('cart', None)
-            flash('Success! Your order has been placed.', 'success')
-            return redirect(url_for('index'))
+        return redirect(url_for('verify_otp'))
 
     else: # This covers 'jdoe' and any other "normal" user
         create_new_order(username)
         session.pop('cart', None)
         flash('Success! Your order has been placed on account.', 'success')
-        return redirect(url_for('index'))
+        return redirect(url_for('profile'))
 
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
+@login_required
 def verify_otp():
     username = session.get('username')
     # Update protection to allow both users
@@ -353,25 +358,18 @@ def verify_otp():
             else:
                 flash('Invalid OTP code. Please try again.', 'error')
         elif username == 'otp':
-            if otp_code and len(otp_code) == 4 and otp_code.isdigit():
+            if otp_code == '1234':
                 create_new_order(username) # Add the order to history
                 session.pop('cart', None)
                 flash('Payment verified and order confirmed!', 'success')
-                return redirect(url_for('index'))
-        
-        # Original logic for 'otp' user
-        elif username == 'otp':
-            if otp_code and len(otp_code) == 4 and otp_code.isdigit():
-                session.pop('cart', None)
-                flash('Payment verified and order confirmed!', 'success')
-                return redirect(url_for('index'))
+                return redirect(url_for('profile'))
             else:
-                flash('Invalid OTP code. Please try again.', 'error')
-    
+                flash('Invalid OTP code. Please try again.', 'error')    
     return render_template('otp.html')
 
 
 @app.route('/register_company', methods=['GET', 'POST'])
+@login_required
 def register_company():
     if session.get('username') != 'guestcheckout':
         return redirect(url_for('login'))
@@ -415,6 +413,7 @@ def create_new_order(username):
         FAKE_USERS[username]['orders'].insert(0, new_order)
 
 @app.route('/select_company')
+@login_required
 def select_company():
     if session.get('username') != 'guestcheckout':
         return redirect(url_for('login'))
@@ -422,16 +421,41 @@ def select_company():
 
 
 @app.route('/verify_identity/<company_name>')
+@login_required
 def verify_identity(company_name):
+    """This page now ONLY displays the verification options."""
     username = session.get('username')
-    if username != 'guestcheckout':
+    if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
-    # Final step in the flow
-    # In a real app, this would integrate with an identity service
-    create_new_order(username)
-    session.pop('cart', None) # Complete the checkout now
-    flash(f'Thank you! Your order for {company_name} is confirmed.', 'success')
+    
+    # The logic for creating an order has been removed from here.
+    # This route now just shows the page with the two final buttons.
     return render_template('verify_identity.html', company_name=company_name)
+
+@app.route('/verification_success')
+@login_required
+def verification_success():
+    """This new route handles a successful verification."""
+    username = session.get('username')
+    if username not in ['guestcheckout', 'fraud']:
+        return redirect(url_for('login'))
+
+    create_new_order(username)
+    session.pop('cart', None) 
+    flash('Verification successful! Your order has been confirmed.', 'success')
+    return redirect(url_for('profile'))
+
+@app.route('/verification_failed')
+@login_required
+def verification_failed():
+    """This new route handles a failed verification."""
+    username = session.get('username')
+    if username not in ['guestcheckout', 'fraud']:
+        return redirect(url_for('login'))
+
+    # We don't create an order or clear the cart
+    flash('Verification failed. Your order was not processed. Please contact support.', 'error')
+    return redirect(url_for('view_cart'))
 
 
 

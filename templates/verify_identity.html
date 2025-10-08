@@ -1,11 +1,32 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="login-container" style="text-align: center;">
-    <h1>Identity Verification</h1>
-    <p class="login-instructions">
-        To complete your registration for <strong>{{ company_name }}</strong>, you will be redirected to our identity verification partner.
+<div class="payment-modal" style="margin: 2rem auto; max-width: 600px;">
+    <h2>Verification Required</h2>
+    <p style="margin-top: -1rem; margin-bottom: 1.5rem; color: #555;">
+        Please complete the following steps for <strong>{{ company_name }}</strong>.
     </p>
-    <a href="{{ url_for('index') }}" class="btn btn-primary btn-full">Proceed to Verification</a>
+
+    <div class="payment-options-list">
+        <a href="#" class="payment-option company-select">
+            <div style="flex-grow: 1;">
+                <p style="font-size: 1.1rem; color: #333;">1. ID Verification</p>
+                <p style="font-weight: 400; font-size: 0.9rem;">Click here to verify your identity with our trusted partner.</p>
+            </div>
+            <span>&rarr;</span>
+        </a>
+        <a href="#" class="payment-option company-select">
+            <div style="flex-grow: 1;">
+                <p style="font-size: 1.1rem; color: #333;">2. Bank Account Verification</p>
+                <p style="font-weight: 400; font-size: 0.9rem;">Click here to connect your business bank account.</p>
+            </div>
+            <span>&rarr;</span>
+        </a>
+    </div>
+
+    <div class="payment-modal-footer">
+        <a href="{{ url_for('verification_failed') }}" class="btn btn-danger">Verification Failed</a>
+        <a href="{{ url_for('verification_success') }}" class="btn btn-primary">Verification OK</a>
+    </div>
 </div>
 {% endblock %}
