@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, session, flash, abort, request
+from flask import Flask, render_template, redirect, url_for, session, flash, abort, request, jsonify
 import random
 from datetime import datetime
 from functools import wraps
@@ -38,9 +38,9 @@ FAKE_USERS = {
     },
     'guestcheckout': {
         'password': 'password',
-        'company_name': 'Guest Services',
-        'address': '111 Guest Pass, Los Angeles, CA 90005',
-        'credit_limit': 500.00,
+        'company_name': None,
+        'address': None,
+        'credit_limit': 0.00,
         'orders': []
     },
 }
@@ -159,6 +159,13 @@ FAKE_PRODUCTS = [
     },
 ]
 
+FAKE_COMPANIES = [
+    {'name': 'Golden State Builders, Inc.', 'address': '123 Market St, San Francisco, CA'},
+    {'name': 'Pacific Crest Construction', 'address': '456 Ocean Ave, Los Angeles, CA'},
+    {'name': 'Sierra Nevada Contractors', 'address': '789 Pine Rd, Lake Tahoe, CA'},
+]
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -172,18 +179,16 @@ def login_required(f):
 @app.route('/profile')
 @login_required
 def profile():
-    # Make sure user is logged in
-    if 'username' not in session:
-        flash('You must be logged in to view your profile.', 'error')
-        return redirect(url_for('login'))
-
     username = session['username']
-    user_data = FAKE_USERS.get(username)
+    # Make a copy of the user data so we can modify it safely
+    user_data = FAKE_USERS.get(username).copy()
 
-    if not user_data:
-        # This case is unlikely if session is managed properly, but it's safe to have
-        flash('User not found.', 'error')
-        return redirect(url_for('logout'))
+    # If the user is 'guestcheckout' and has chosen a company,
+    # override the profile data with the info from the session.
+    if username == 'guestcheckout' and 'guest_company_details' in session:
+        user_data['company_name'] = session['guest_company_details']['name']
+        user_data['address'] = session['guest_company_details']['address']
+        user_data['credit_limit'] = session['guest_company_details']['credit_limit']
 
     return render_template('profile.html', user=user_data)
 
@@ -196,11 +201,12 @@ def login():
         user_data = FAKE_USERS.get(username)
         if user_data and user_data['password'] == password:
             session['username'] = username
-            flash(f'Welcome back, {username}!', 'success')
+            if username == "jdoe":
+                flash(f'Welcome back, {username}!', 'success')
             
             # Check for a 'next' page in the URL and redirect there
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('index')) # CHANGED
+            return redirect(next_page or url_for('index'))
         else:
             flash('Invalid username or password.', 'error')
 
@@ -380,12 +386,6 @@ def register_company():
         
     return render_template('register_company.html')
 
-# --- FAKE COMPANY DATA for the next step ---
-FAKE_COMPANIES = [
-    {'name': 'Golden State Builders, Inc.', 'address': '123 Market St, San Francisco, CA'},
-    {'name': 'Pacific Crest Construction', 'address': '456 Ocean Ave, Los Angeles, CA'},
-    {'name': 'Sierra Nevada Contractors', 'address': '789 Pine Rd, Lake Tahoe, CA'},
-]
 
 def create_new_order(username):
     # This function creates an order and adds it to the user's history
@@ -423,19 +423,26 @@ def select_company():
 @app.route('/verify_identity/<company_name>')
 @login_required
 def verify_identity(company_name):
-    """This page now ONLY displays the verification options."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
+        
+    # If this is the guest user, find and save their chosen company to the session
+    if username == 'guestcheckout':
+        company_data = next((c for c in FAKE_COMPANIES if c['name'] == company_name), None)
+        if company_data:
+            session['guest_company_details'] = company_data
+            session['guest_company_details']['credit_limit'] = 20000.00
     
-    # The logic for creating an order has been removed from here.
-    # This route now just shows the page with the two final buttons.
+    create_new_order(username)
+    session.pop('cart', None) 
+    flash(f'Thank you! Your order for {company_name} is confirmed.', 'success')
     return render_template('verify_identity.html', company_name=company_name)
 
 @app.route('/verification_success')
 @login_required
 def verification_success():
-    """This new route handles a successful verification."""
+    """This route handles a successful verification."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
@@ -448,7 +455,7 @@ def verification_success():
 @app.route('/verification_failed')
 @login_required
 def verification_failed():
-    """This new route handles a failed verification."""
+    """This route handles a failed verification."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
@@ -456,6 +463,35 @@ def verification_failed():
     # We don't create an order or clear the cart
     flash('Verification failed. Your order was not processed. Please contact support.', 'error')
     return redirect(url_for('view_cart'))
+
+@app.route('/update_cart', methods=['POST'])
+@login_required
+def update_cart():
+    data = request.get_json()
+    product_id = int(data.get('product_id'))
+    new_quantity = int(data.get('quantity'))
+
+    if 'cart' in session and product_id and new_quantity is not None:
+        cart_items = session['cart']
+        
+        # Count current quantity
+        current_quantity = cart_items.count(product_id)
+        
+        # Calculate the difference
+        diff = new_quantity - current_quantity
+        
+        if diff > 0: # Add items
+            for _ in range(diff):
+                cart_items.append(product_id)
+        elif diff < 0: # Remove items
+            for _ in range(abs(diff)):
+                if product_id in cart_items:
+                    cart_items.remove(product_id)
+        
+        session.modified = True
+        return jsonify({'status': 'success', 'message': 'Cart updated'})
+
+    return jsonify({'status': 'error', 'message': 'Invalid request'}), 400
 
 
 

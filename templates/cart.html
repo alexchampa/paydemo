@@ -6,35 +6,35 @@
         {% if cart_items %}
             <div class="cart-items">
                 {% for item in cart_items %}
-                <div class="cart-item">
+                <div class="cart-item" data-product-id="{{ item.id }}">
                     <div class="cart-item-main">
                         <div class="cart-item-image">
                             <img src="{{ url_for('static', filename=item.image) }}" alt="{{ item.name }}">
                         </div>
                         <div class="cart-item-details">
                             <span class="cart-item-name">{{ item.name }}</span>
-                            <span class="cart-item-quantity">
-                                ${{ "%.2f"|format(item.price) }} each (Qty: {{ item.quantity }})
-                            </span>
+                            <div class="cart-item-quantity">
+                                <span>${{ "%.2f"|format(item.price) }} each</span>
+                                <input type="number" class="quantity-input" value="{{ item.quantity }}" 
+                                       min="0" data-price="{{ item.price }}" data-product-id="{{ item.id }}">
+                            </div>
                         </div>
                     </div>
                     <div class="cart-item-actions">
-                        <span class="cart-item-price">${{ "%.2f"|format(item.subtotal) }}</span>
+                        <span class="cart-item-price" data-subtotal-for="{{ item.id }}">${{ "%.2f"|format(item.subtotal) }}</span>
                         <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="remove-link">Remove</a>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             <div class="cart-summary">
-                <div class="cart-summary">
-                    <div class="cart-total">
-                        <span>Total</span>
-                        <span>${{ "%.2f"|format(total) }}</span>
-                    </div>
-                    <button id="show-payment-modal-btn" class="btn btn-primary">
-                        Checkout
-                    </button>
+                <div class="cart-total">
+                    <span>Total</span>
+                    <span id="grand-total">${{ "%.2f"|format(total) }}</span>
                 </div>
+                <button id="show-payment-modal-btn" class="btn btn-primary">
+                    Checkout
+                </button>
             </div>
         {% else %}
             <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
@@ -82,6 +82,7 @@
         const cancelBtn = document.getElementById('cancel-payment-btn');
         const confirmBtn = document.getElementById('confirm-payment-btn'); // Get the confirm button
         const paymentOptions = paymentModal.querySelectorAll('.payment-option');
+        const quantityInputs = document.querySelectorAll('.quantity-input');
 
         if (showModalBtn) {
             showModalBtn.addEventListener('click', (e) => {
@@ -119,6 +120,59 @@
              const baseUrl = "{{ url_for('checkout') }}";
              const selectedMethod = initialSelected.dataset.method;
              confirmBtn.href = `${baseUrl}?method=${selectedMethod}`;
+        }
+        quantityInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const newQuantity = parseInt(e.target.value);
+                const price = parseFloat(e.target.dataset.price);
+                const productId = e.target.dataset.productId;
+                
+                // Update the subtotal for this item on the page
+                const subtotalEl = document.querySelector(`[data-subtotal-for="${productId}"]`);
+                subtotalEl.textContent = `$${(newQuantity * price).toFixed(2)}`;
+                
+                // Recalculate and update the grand total
+                updateGrandTotal();
+
+                // If quantity is 0, find and remove the whole item row
+                if (newQuantity === 0) {
+                    const itemRow = e.target.closest('.cart-item');
+                    if(itemRow) itemRow.remove();
+                }
+                
+                // Send the update to the server in the background
+                updateCartOnServer(productId, newQuantity);
+            });
+        });
+
+        function updateGrandTotal() {
+            let total = 0;
+            document.querySelectorAll('.cart-item-price').forEach(subtotalEl => {
+                total += parseFloat(subtotalEl.textContent.replace('$', ''));
+            });
+            document.getElementById('grand-total').textContent = `$${total.toFixed(2)}`;
+        }
+
+        function updateCartOnServer(productId, quantity) {
+            fetch('/update_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    quantity: quantity
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Server response:', data.message);
+                // Optionally, you could refresh the page or show a notification
+                // For now, we just log the success. The page is already updated.
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
         }
     });
 </script>

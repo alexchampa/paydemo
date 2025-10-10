@@ -745,3 +745,20 @@ nav a {
 .btn.btn-danger:hover {
     background-color: #c82333;
 }
+
+.cart-item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem; /* Space between "price each" and the input */
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.quantity-input {
+    width: 60px; /* Set a fixed width */
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 600;
+}
