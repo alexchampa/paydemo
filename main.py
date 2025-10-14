@@ -12,28 +12,28 @@ FAKE_USERS = {
         'password': 'password',
         'company_name': 'John Doe Construction',
         'address': '123 Builder Lane, Los Angeles, CA 90001',
-        'credit_limit': 50000.00,
+        'credit_limit': 20000.00,
         'orders': []
     },
     'reject': {
         'password': 'password',
         'company_name': 'Reject Electricals',
         'address': '456 Power Ave, Los Angeles, CA 90002',
-        'credit_limit': 10000.00,
+        'credit_limit': 0.00,
         'orders': []
     },
     'fraud': {
         'password': 'password',
         'company_name': 'Fraudulent Fixtures Inc.',
         'address': '789 Shadow St, Los Angeles, CA 90003',
-        'credit_limit': 0.00,
+        'credit_limit': 20000.00,
         'orders': []
     },
     'otp': {
         'password': 'password',
         'company_name': 'One-Time Parts Co.',
         'address': '101 Supply Rd, Los Angeles, CA 90004',
-        'credit_limit': 25000.00,
+        'credit_limit': 20000.00,
         'orders': []
     },
     'guestcheckout': {
@@ -43,6 +43,12 @@ FAKE_USERS = {
         'credit_limit': 0.00,
         'orders': []
     },
+}
+
+CURRENCY_RATES = {
+    'USD': {'rate': 1.0, 'symbol': '$'},
+    'GBP': {'rate': 0.82, 'symbol': '£'},
+    'EUR': {'rate': 0.95, 'symbol': '€'},
 }
 
 FAKE_PRODUCTS = [
@@ -176,6 +182,31 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+# Add this function to make the rates available to all templates ---
+@app.context_processor
+def inject_currencies():
+    return dict(CURRENCY_RATES=CURRENCY_RATES, current_currency=session.get('currency', 'USD'))
+
+# Add this custom filter to format prices ---
+@app.template_filter('to_currency')
+def to_currency_filter(value):
+    currency_code = session.get('currency', 'USD') # Default to USD
+    currency = CURRENCY_RATES.get(currency_code, CURRENCY_RATES['USD'])
+    
+    converted_value = value * currency['rate']
+    symbol = currency['symbol']
+    
+    return f"{symbol}{converted_value:,.2f}"
+
+# Add this new route to handle currency switching ---
+@app.route('/set_currency/<currency>')
+def set_currency(currency):
+    if currency in CURRENCY_RATES:
+        session['currency'] = currency
+    # Redirect back to the page the user was on
+    return redirect(request.referrer or url_for('index'))
+
 @app.route('/profile')
 @login_required
 def profile():
@@ -257,7 +288,7 @@ def product_detail(product_id):
         
     return render_template('product_detail.html', product=product, avg_rating=avg_rating)
 
-@app.route('/add_to_cart/<int:product_id>')
+@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 @login_required
 def add_to_cart(product_id):
     if 'cart' not in session:
@@ -265,8 +296,13 @@ def add_to_cart(product_id):
     
     session['cart'].append(product_id)
     session.modified = True
-    flash(f'Product added to your cart!', 'success')
-    return redirect(url_for('index'))
+    
+    # Instead of redirecting, return a JSON response
+    return jsonify({
+        'status': 'success',
+        'message': 'Product added to cart!',
+        'cart_count': len(session['cart'])
+    })
 
 # In your app.py, find the view_cart() function
 @app.route('/cart')
@@ -295,37 +331,39 @@ def view_cart():
     
     return render_template('cart.html', cart_items=cart_products, total=total_price)
 
-@app.route('/remove_from_cart/<int:product_id>')
+
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST']) # IMPORTANT: Add methods=['POST']
 @login_required
 def remove_from_cart(product_id):
-    if 'cart' in session:
-        if product_id in session['cart']:
-            session['cart'].remove(product_id)
-            session.modified = True
-            flash('Product removed from your cart.', 'info')
-            
-    return redirect(url_for('view_cart'))
+    if 'cart' in session and product_id in session['cart']:
+        session['cart'].remove(product_id)
+        session.modified = True
+        
+        # After removing, return the new cart status as JSON
+        return jsonify({
+            'status': 'success',
+            'message': 'Product removed from cart.',
+            'cart_count': len(session['cart'])
+        })
+        
+    return jsonify({'status': 'error', 'message': 'Item not found in cart'}), 400
 
 
 @app.route('/checkout')
 @login_required
 def checkout():
-    if 'username' not in session:
-        flash('Please log in to complete your checkout.', 'info')
-        return redirect(url_for('login', next=url_for('view_cart')))
-
-    # Get payment method from URL and store it in the session
+    # The 'if username not in session' check is handled by the decorator
     payment_method = request.args.get('method', 'Unknown')
     session['payment_method'] = payment_method
     
     username = session.get('username')
 
+    # --- Logic for specific user types ---
     if username == 'reject':
         flash('Payment Rejected. Your payment method was declined.', 'error')
         return redirect(url_for('view_cart'))
 
     elif username == 'fraud':
-        # Instead of blocking, redirect to identity verification
         user_data = FAKE_USERS.get(username)
         company_name = user_data.get('company_name', 'Your Company')
         flash('For your security, please verify your identity to complete this transaction.', 'info')
@@ -335,14 +373,22 @@ def checkout():
         return redirect(url_for('verify_otp'))
         
     elif username == 'guestcheckout':
-        return redirect(url_for('verify_otp'))
+        # It checks which payment method the guest user selected.
+        if session.get('payment_method') == 'allianz':
+            # **Only if Allianz is chosen**, start the multi-step verification.
+            return redirect(url_for('verify_otp'))
+        else:
+            # **For all other methods (Credit Card, ACH)**, the transaction succeeds instantly.
+            create_new_order(username)
+            session.pop('cart', None)
+            flash('Success! Your order has been placed.', 'success')
+            return redirect(url_for('profile'))
 
-    else: # This covers 'jdoe' and any other "normal" user
+    else: 
         create_new_order(username)
         session.pop('cart', None)
         flash('Success! Your order has been placed on account.', 'success')
         return redirect(url_for('profile'))
-
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 @login_required
@@ -423,20 +469,13 @@ def select_company():
 @app.route('/verify_identity/<company_name>')
 @login_required
 def verify_identity(company_name):
+    """This page now ONLY displays the verification options."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
-        
-    # If this is the guest user, find and save their chosen company to the session
-    if username == 'guestcheckout':
-        company_data = next((c for c in FAKE_COMPANIES if c['name'] == company_name), None)
-        if company_data:
-            session['guest_company_details'] = company_data
-            session['guest_company_details']['credit_limit'] = 20000.00
     
-    create_new_order(username)
-    session.pop('cart', None) 
-    flash(f'Thank you! Your order for {company_name} is confirmed.', 'success')
+    # All logic for creating the order and flashing the message has been removed from here.
+    # This route now just shows the page with the two final buttons.
     return render_template('verify_identity.html', company_name=company_name)
 
 @app.route('/verification_success')

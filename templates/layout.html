@@ -16,6 +16,14 @@
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5z" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                 <span>DemoCorp</span>
             </div>
+            <div class="currency-switcher">
+                {% for code in CURRENCY_RATES %}
+                    <a href="{{ url_for('set_currency', currency=code) }}" 
+                       class="{{ 'active' if current_currency == code else '' }}">
+                       {{ code }}
+                    </a>
+                {% endfor %}
+            </div>
             <nav>
                 <a href="{{ url_for('index') }}">Products</a>
                 <a href="{{ url_for('view_cart') }}" class="cart-link">Cart 
@@ -38,14 +46,6 @@
     </header>
 
     <main class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
         {% block content %}{% endblock %}
     </main>
 
@@ -54,5 +54,74 @@
             <p>&copy; 2025 DemoCorp | B2B Solutions</p>
         </div>
     </footer>
+    <div id="toast-notification" class="toast"></div>
+
+<div id="toast-notification" class="toast"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- NEW: CATCH FLASHED MESSAGES AND SHOW AS TOASTS ---
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showToast("{{ message }}", "{{ category }}");
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        // --- END OF NEW SECTION ---
+
+        const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+        addToCartButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = e.target.href;
+                fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        updateCartBadge(data.cart_count);
+                        showToast(data.message, 'success'); // Pass category
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+    });
+
+    function updateCartBadge(count) {
+        const badge = document.querySelector('.cart-badge');
+        if (badge) {
+            badge.textContent = count;
+            if (count > 0) badge.style.display = 'inline-block';
+            else badge.style.display = 'none';
+        } else if (count > 0) {
+            const cartLink = document.querySelector('.cart-link');
+            if(cartLink) {
+                const newBadge = document.createElement('span');
+                newBadge.className = 'cart-badge';
+                newBadge.textContent = count;
+                cartLink.appendChild(newBadge);
+            }
+        }
+    }
+
+    // --- UPDATED showToast function ---
+    function showToast(message, category = 'success') {
+        const toast = document.getElementById('toast-notification');
+        toast.textContent = message;
+        
+        // Reset classes and add the new category
+        toast.className = 'toast show';
+        if (category === 'error') {
+            toast.classList.add('error');
+        } else if (category === 'info') {
+            toast.classList.add('info');
+        }
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+</script>
 </body>
 </html>

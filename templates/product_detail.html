@@ -17,9 +17,9 @@
                 {% endfor %}
                 <span class="review-count">({{ product.reviews|length }} Reviews)</span>
             </div>
-            <p class="product-detail-price">${{ "%.2f"|format(product.price) }}</p>
+            <p class="product-price">{{ product.price | to_currency }}</p>
             <p class="product-detail-description">{{ product.description }}</p>
-            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-primary btn-full">
+            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-primary btn-full add-to-cart-btn">
                 Add to Cart
             </a>
         </div>

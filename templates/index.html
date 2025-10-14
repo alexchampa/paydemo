@@ -24,9 +24,9 @@
                 <p class="product-description">{{ product.description | truncate(80, True, '...') }}</p>
                 
                 <div class="product-footer">
-                    <p class="product-price">${{ "%.2f"|format(product.price) }}</p>
+                    <p class="product-price">{{ product.price | to_currency }}</p>
                     <div class="product-buttons">
-                        <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-secondary">Add to Cart</a>
+                        <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-secondary add-to-cart-btn">Add to Cart</a>
                         <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn">Details</a>
                     </div>
                 </div>

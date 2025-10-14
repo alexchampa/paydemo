@@ -762,3 +762,83 @@ nav a {
     text-align: center;
     font-weight: 600;
 }
+
+/* --- Toast Notification Styles --- */
+.toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #28a745; /* Green for success */
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1001;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 30px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.toast.show {
+    visibility: visible;
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+.toast.info {
+    background-color: #007bff; /* Blue for info */
+}
+.toast.error {
+    background-color: #dc3545; /* Red for error */
+}
+
+@-webkit-keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.currency-switcher {
+    display: flex;
+    background-color: #f1f3f5;
+    border-radius: 20px;
+    padding: 4px;
+}
+
+.currency-switcher a {
+    padding: 0.25rem 0.8rem;
+    color: #868e96;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 20px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.currency-switcher a.active {
+    background-color: #fff;
+    color: #0057b8;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
