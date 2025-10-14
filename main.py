@@ -247,6 +247,7 @@ def login():
 def logout():
     session.pop('username', None)
     session.pop('guest_company_details', None)
+    session['cart'] = []
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
