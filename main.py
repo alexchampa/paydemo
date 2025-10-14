@@ -252,7 +252,6 @@ def logout():
     return redirect(url_for('index'))
 
 @app.route('/')
-@login_required
 def index():
     # Check if we've already shown the pop-up in this session
     popup_shown = session.get('popup_shown', False)
@@ -275,7 +274,6 @@ def index():
     return render_template('index.html', products=products_with_ratings, show_popup=(not popup_shown))
 
 @app.route('/product/<int:product_id>')
-@login_required
 def product_detail(product_id):
     product = next((p for p in FAKE_PRODUCTS if p['id'] == product_id), None)
     
@@ -291,7 +289,6 @@ def product_detail(product_id):
     return render_template('product_detail.html', product=product, avg_rating=avg_rating)
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
-@login_required
 def add_to_cart(product_id):
     if 'cart' not in session:
         session['cart'] = []
@@ -308,7 +305,6 @@ def add_to_cart(product_id):
 
 # In your app.py, find the view_cart() function
 @app.route('/cart')
-@login_required
 def view_cart():
     cart_product_ids = session.get('cart', [])
     
@@ -335,7 +331,6 @@ def view_cart():
 
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST']) # IMPORTANT: Add methods=['POST']
-@login_required
 def remove_from_cart(product_id):
     if 'cart' in session and product_id in session['cart']:
         session['cart'].remove(product_id)
@@ -527,7 +522,6 @@ def verification_failed():
     return redirect(url_for('view_cart'))
 
 @app.route('/update_cart', methods=['POST'])
-@login_required
 def update_cart():
     data = request.get_json()
     product_id = int(data.get('product_id'))
