@@ -20,8 +20,19 @@
                 <textarea id="address" rows="3" readonly>{{ user.address }}</textarea>
             </div>
             <div class="credit-display">
-                <label>Available Credit</label>
-                <p>{{ available_credit | to_currency }}</p>
+                <div class="credit-row">
+                    <span>Initial Credit Line</span>
+                    <span>{{ credit.limit | to_currency }}</span>
+                </div>
+                <div class="credit-row">
+                    <span>Credit Used (Orders)</span>
+                    <span>- {{ credit.spent | to_currency }}</span>
+                </div>
+                <hr class="credit-divider">
+                <div class="credit-row total">
+                    <label>Available Credit</label>
+                    <p>{{ credit.available | to_currency }}</p>
+                </div>
             </div>
         </form>
     </div>
@@ -35,17 +46,18 @@
                         <th>Order ID</th>
                         <th>Date</th>
                         <th>Status</th>
-                        <th>Payment Method</th> <th>Total</th>
+                        <th>Payment Method</th>
+                        <th>Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for order in user.orders %}
                     <tr>
-                        <td>{{ order.id }}</td>
-                        <td>{{ order.date }}</td>
-                        <td><span class="status-badge status-{{ order.status|lower }}">{{ order.status }}</span></td>
-                        <td>{{ order.get('payment_method', 'N/A') }}</td>
-                        <td>{{ order.total | to_currency }}</td>
+                        <td data-label="Order ID">{{ order.id }}</td>
+                        <td data-label="Date">{{ order.date }}</td>
+                        <td data-label="Status"><span class="status-badge status-{{ order.status|lower|replace(' ', '-') }}">{{ order.status }}</span></td>
+                        <td data-label="Payment Method">{{ order.get('payment_method', 'N/A') }}</td>
+                        <td data-label="Total">{{ order.total | to_currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -515,6 +515,47 @@ main {
     font-family: inherit;
 }
 .profile-form textarea { resize: vertical; }
+
+@media (max-width: 768px) {
+    /* Reduce padding on the main profile sections */
+    .profile-form-section, .profile-orders-section {
+        padding: 1.5rem;
+    }
+
+    /* --- Responsive Order History Table --- */
+    .orders-table thead {
+        display: none; /* Hide the table headers */
+    }
+
+    .orders-table tr {
+        display: block; /* Make each row its own card */
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    .orders-table td {
+        display: flex;
+        justify-content: space-between; /* Pushes label and value apart */
+        padding: 0.75rem 0.5rem;
+        border-bottom: 1px solid #f1f3f5;
+        text-align: right; /* Aligns the value to the right */
+    }
+
+    .orders-table td:last-child {
+        border-bottom: none;
+    }
+
+    /* Use the data-label attribute to create labels for each cell */
+    .orders-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        text-align: left;
+        margin-right: 1rem;
+    }
+}
+
 .credit-display {
     background: #e9f5ff;
     border: 1px solid #b3d7ff;
@@ -580,6 +621,11 @@ main {
     /* --- Profile Page --- */
     .profile-container {
         grid-template-columns: 1fr;
+    }
+    #primary-navigation .cart-badge {
+        /* Adjusts the badge position for the vertical mobile menu */
+        top: 0.5rem;
+        right: 2rem;
     }
 }
 

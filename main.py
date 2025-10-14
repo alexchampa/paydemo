@@ -6,43 +6,28 @@ from functools import wraps
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-very-secret-key'
 
-
-FAKE_USERS = {
-    'jdoe': {
-        'password': 'password',
-        'company_name': 'John Doe Construction',
-        'address': '123 Builder Lane, Los Angeles, CA 90001',
-        'credit_limit': 20000.00,
-        'orders': []
+REGIONAL_FAKE_USERS = {
+    'USD': {
+        'jdoe': {'password': 'password', 'company_name': 'John Doe Construction', 'address': '123 Builder Lane, Los Angeles, CA', 'credit_limit': 50000.00, 'orders': []},
+        'reject': {'password': 'password', 'company_name': 'Reject Electricals', 'address': '456 Power Ave, Los Angeles, CA', 'credit_limit': 0.00, 'orders': []},
+        'fraud': {'password': 'password', 'company_name': 'Fraudulent Fixtures Inc.', 'address': '789 Shadow St, Los Angeles, CA', 'credit_limit': 10000.00, 'orders': []},
+        'otp': {'password': 'password', 'company_name': 'One-Time Parts Co.', 'address': '101 Supply Rd, Los Angeles, CA', 'credit_limit': 25000.00, 'orders': []},
+        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 500.00, 'orders': []},
     },
-    'reject': {
-        'password': 'password',
-        'company_name': 'Reject Electricals',
-        'address': '456 Power Ave, Los Angeles, CA 90002',
-        'credit_limit': 0.00,
-        'orders': []
+    'GBP': {
+        'jdoe': {'password': 'password', 'company_name': 'John Smith & Sons Ltd', 'address': '123 High Street, London, UK', 'credit_limit': 40000.00, 'orders': []},
+        'reject': {'password': 'password', 'company_name': 'UK Power Solutions', 'address': '456 Victoria Rd, Manchester, UK', 'credit_limit': 0.00, 'orders': []},
+        'fraud': {'password': 'password', 'company_name': 'British Imports Co.', 'address': '789 Docklands, Liverpool, UK', 'credit_limit': 8000.00, 'orders': []},
+        'otp': {'password': 'password', 'company_name': 'Midlands Parts Ltd', 'address': '101 Industrial Way, Birmingham, UK', 'credit_limit': 20000.00, 'orders': []},
+        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 400.00, 'orders': []},
     },
-    'fraud': {
-        'password': 'password',
-        'company_name': 'Fraudulent Fixtures Inc.',
-        'address': '789 Shadow St, Los Angeles, CA 90003',
-        'credit_limit': 20000.00,
-        'orders': []
-    },
-    'otp': {
-        'password': 'password',
-        'company_name': 'One-Time Parts Co.',
-        'address': '101 Supply Rd, Los Angeles, CA 90004',
-        'credit_limit': 20000.00,
-        'orders': []
-    },
-    'guestcheckout': {
-        'password': 'password',
-        'company_name': None,
-        'address': None,
-        'credit_limit': 0.00,
-        'orders': []
-    },
+    'EUR': {
+        'jdoe': {'password': 'password', 'company_name': 'Jean Dupont S.A.', 'address': '123 Rue de la Paix, Paris, France', 'credit_limit': 45000.00, 'orders': []},
+        'reject': {'password': 'password', 'company_name': 'Euro-Electric GmbH', 'address': '456 Kurfürstendamm, Berlin, Germany', 'credit_limit': 0.00, 'orders': []},
+        'fraud': {'password': 'password', 'company_name': 'Continental Trading', 'address': '789 Via del Corso, Rome, Italy', 'credit_limit': 9000.00, 'orders': []},
+        'otp': {'password': 'password', 'company_name': 'Auto Parts España', 'address': '101 Gran Vía, Madrid, Spain', 'credit_limit': 22000.00, 'orders': []},
+        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 450.00, 'orders': []},
+    }
 }
 
 CURRENCY_RATES = {
@@ -165,12 +150,23 @@ FAKE_PRODUCTS = [
     },
 ]
 
-FAKE_COMPANIES = [
-    {'company_name': 'Golden State Builders, Inc.', 'address': '123 Market St, San Francisco, CA'},
-    {'company_name': 'Pacific Crest Construction', 'address': '456 Ocean Ave, Los Angeles, CA'},
-    {'company_name': 'Sierra Nevada Contractors', 'address': '789 Pine Rd, Lake Tahoe, CA'},
-]
-
+REGIONAL_FAKE_COMPANIES = {
+    'USD': [
+        {'company_name': 'Golden State Builders, Inc.', 'address': '123 Market St, San Francisco, CA'},
+        {'company_name': 'Pacific Crest Construction', 'address': '456 Ocean Ave, Los Angeles, CA'},
+        {'company_name': 'Sierra Nevada Contractors', 'address': '789 Pine Rd, Lake Tahoe, CA'},
+    ],
+    'GBP': [
+        {'company_name': 'Thames Valley Construction Ltd', 'address': '123 River Rd, Reading, UK'},
+        {'company_name': 'Northern Powerhouse Builders', 'address': '456 Canal St, Manchester, UK'},
+        {'company_name': 'Scottish Highlands Homes', 'address': '789 Lochside, Inverness, UK'},
+    ],
+    'EUR': [
+        {'company_name': 'Bâtisseurs de Paris S.A.', 'address': '123 Boulevard Haussmann, Paris, France'},
+        {'company_name': 'Berlin Bau GmbH', 'address': '456 Alexanderplatz, Berlin, Germany'},
+        {'company_name': 'Roma Costruzioni S.p.A.', 'address': '789 Piazza Navona, Rome, Italy'},
+    ]
+}
 
 def login_required(f):
     @wraps(f)
@@ -212,16 +208,17 @@ def set_currency(currency):
 @login_required
 def profile():
     username = session['username']
-    user_data = FAKE_USERS.get(username).copy()
+    session['currency'] = session.get('currency', 'USD')
+    user_data = REGIONAL_FAKE_USERS.get(session['currency']).get(username).copy()
 
     # This block correctly updates user_data for a returning guest
     if username == 'guestcheckout' and 'guest_company_details' in session:
         user_data.update(session['guest_company_details'])
 
-    available_credit = get_available_credit(user_data)
+    credit = get_available_credit(user_data)
     
     # Pass both the base user data and the calculated credit to the template
-    return render_template('profile.html', user=user_data, available_credit=available_credit)
+    return render_template('profile.html', user=user_data, credit=credit)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -229,8 +226,8 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-
-        user_data = FAKE_USERS.get(username)
+        session['currency'] = session.get('currency', 'USD')
+        user_data = REGIONAL_FAKE_USERS.get(session['currency']).get(username)
         if user_data and user_data['password'] == password:
             session['username'] = username
             if username == "jdoe":
@@ -246,9 +243,10 @@ def login():
 
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
-    session.pop('guest_company_details', None)
-    session['cart'] = []
+    username = session['username']
+    session['currency'] = session.get('currency', 'USD')
+    REGIONAL_FAKE_USERS.get(session['currency'])[username]['orders'] = []
+    session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
@@ -354,7 +352,8 @@ def checkout():
     session['payment_method'] = payment_method
     
     username = session.get('username')
-    user_data = FAKE_USERS.get(username, {}).copy() # Get a mutable copy
+    session['currency'] = session.get('currency', 'USD')
+    user_data = REGIONAL_FAKE_USERS.get(session['currency']).get(username, {}).copy() # Get a mutable copy
 
     is_returning_guest = username == 'guestcheckout' and 'guest_company_details' in session
 
@@ -390,13 +389,13 @@ def checkout():
 
             if session.get('payment_method') == 'allianz':
                 cart_total = get_cart_total()
-                available_credit = get_available_credit(user_data)
+                credit = get_available_credit(user_data)
                 
                 # check if the user is guest and session['id_verified'] is False
                 if username == 'guestcheckout' and 'id_verified' in session and not session['id_verified']:
                     return redirect(url_for('verify_otp'))
 
-                if cart_total > available_credit:
+                if cart_total > credit['available']:
                     flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
                     return redirect(url_for('view_cart'))
                 else:
@@ -434,14 +433,15 @@ def verify_otp():
                 if session.get('payment_method') == 'allianz':
                     cart_total = get_cart_total()
                     username = session.get('username')
-                    user_data = FAKE_USERS.get(username, {}).copy() # Get a mutable copy
+                    session['currency'] = session.get('currency', 'USD')
+                    user_data = REGIONAL_FAKE_USERS.get(session['currency']).get(username, {}).copy() # Get a mutable copy
 
                     is_returning_guest = username == 'guestcheckout' and 'guest_company_details' in session
                     if is_returning_guest:
                         user_data.update(session['guest_company_details'])
-                    available_credit = get_available_credit(user_data)
+                    credit = get_available_credit(user_data)
                     
-                    if cart_total > available_credit:
+                    if cart_total > credit['available']:
                         flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
                         return redirect(url_for('view_cart'))
                 create_new_order(username) # Add the order to history
@@ -488,14 +488,17 @@ def create_new_order(username):
     }
 
     # Add the new order to the top of the user's order list
-    if username in FAKE_USERS:
-        FAKE_USERS[username]['orders'].insert(0, new_order)
+    session['currency'] = session.get('currency', 'USD')
+    if username in REGIONAL_FAKE_USERS.get(session['currency']):
+        REGIONAL_FAKE_USERS.get(session['currency'])[username]['orders'].insert(0, new_order)
 
 @app.route('/select_company')
 @login_required
 def select_company():
     if session.get('username') != 'guestcheckout':
         return redirect(url_for('login'))
+    FAKE_COMPANIES = REGIONAL_FAKE_COMPANIES.get(session.get('currency', 'USD'))
+    print(FAKE_COMPANIES)
     return render_template('select_company.html', companies=FAKE_COMPANIES)
 
 
@@ -527,6 +530,7 @@ def verification_success():
     if username == 'guestcheckout':
         company_name = session.pop('verifying_company_name', None) # Get and clear the temp name
         if company_name:
+            FAKE_COMPANIES = REGIONAL_FAKE_COMPANIES.get(session.get('currency', 'USD'))
             company_data = next((c for c in FAKE_COMPANIES if c['company_name'] == company_name), None)
             if company_data:
                 # Save the company details with the approved credit limit
@@ -536,14 +540,15 @@ def verification_success():
     if session.get('payment_method') == 'allianz':
         cart_total = get_cart_total()
         username = session.get('username')
-        user_data = FAKE_USERS.get(username, {}).copy() # Get a mutable copy
+        session['currency'] = session.get('currency', 'USD')
+        user_data = REGIONAL_FAKE_USERS.get(session['currency']).get(username, {}).copy() # Get a mutable copy
 
         is_returning_guest = username == 'guestcheckout' and 'guest_company_details' in session
         if is_returning_guest:
             user_data.update(session['guest_company_details'])
-        available_credit = get_available_credit(user_data)
+        credit = get_available_credit(user_data)
         
-        if cart_total > available_credit:
+        if cart_total > credit['available']:
             flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
             return redirect(url_for('view_cart'))
     create_new_order(username)
@@ -566,6 +571,7 @@ def verification_failed():
     if username == 'guestcheckout':
         company_name = session.pop('verifying_company_name', None) # Get and clear the temp name
         if company_name:
+            FAKE_COMPANIES = REGIONAL_FAKE_COMPANIES.get(session.get('currency', 'USD'))
             company_data = next((c for c in FAKE_COMPANIES if c['company_name'] == company_name), None)
             if company_data:
                 # Save the company details with a zero credit limit
@@ -630,7 +636,8 @@ def get_available_credit(user_data):
         if order.get('payment_method') == 'Allianz'
     )
     
-    return initial_credit - spent_credit
+    available = initial_credit - spent_credit
+    return {'limit': initial_credit, 'spent': spent_credit, 'available': available}
 
 
 if __name__ == '__main__':
