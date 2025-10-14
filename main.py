@@ -470,22 +470,34 @@ def select_company():
 @app.route('/verify_identity/<company_name>')
 @login_required
 def verify_identity(company_name):
-    """This page now ONLY displays the verification options."""
+    """This page displays the verification options and saves the company context."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
     
-    # All logic for creating the order and flashing the message has been removed from here.
-    # This route now just shows the page with the two final buttons.
+    # Store the company name in the session for the next step
+    if username == 'guestcheckout':
+        session['verifying_company_name'] = company_name
+    
     return render_template('verify_identity.html', company_name=company_name)
 
 @app.route('/verification_success')
 @login_required
 def verification_success():
-    """This route handles a successful verification."""
+    """Handles a successful verification, saving company info and setting credit to $10k."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
+
+    # If guest user, save their selected company info and new credit limit
+    if username == 'guestcheckout':
+        company_name = session.pop('verifying_company_name', None) # Get and clear the temp name
+        if company_name:
+            company_data = next((c for c in FAKE_COMPANIES if c['name'] == company_name), None)
+            if company_data:
+                # Save the company details with the approved credit limit
+                session['guest_company_details'] = company_data
+                session['guest_company_details']['credit_limit'] = 10000.00
 
     create_new_order(username)
     session.pop('cart', None) 
@@ -495,12 +507,21 @@ def verification_success():
 @app.route('/verification_failed')
 @login_required
 def verification_failed():
-    """This route handles a failed verification."""
+    """Handles a failed verification, saving company info and setting credit to $0."""
     username = session.get('username')
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
 
-    # We don't create an order or clear the cart
+    # If guest user, save their selected company info but set credit to zero
+    if username == 'guestcheckout':
+        company_name = session.pop('verifying_company_name', None) # Get and clear the temp name
+        if company_name:
+            company_data = next((c for c in FAKE_COMPANIES if c['name'] == company_name), None)
+            if company_data:
+                # Save the company details with a zero credit limit
+                session['guest_company_details'] = company_data
+                session['guest_company_details']['credit_limit'] = 0.00
+
     flash('Verification failed. Your order was not processed. Please contact support.', 'error')
     return redirect(url_for('view_cart'))
 
