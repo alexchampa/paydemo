@@ -1,5 +1,15 @@
 {% extends "layout.html" %}
 
+{% block demo_panel_content %}
+    <h3>Step: Shopping Cart</h3>
+    <p>This page demonstrates several dynamic features:</p>
+    <ul>
+        <li><strong>Editable Quantities:</strong> Change the number in the input field to see the subtotal and grand total update instantly.</li>
+        <li><strong>AJAX Updates:</strong> All changes (quantity updates, removing items) are sent to the server in the background without a page reload.</li>
+    </ul>
+    <p>Clicking "Checkout" opens the payment modal, which is the entry point for the various user-specific checkout flows.</p>
+{% endblock %}
+
 {% block content %}
     <div class="cart-container">
         <h1 class="cart-title">Your Shopping Cart</h1>

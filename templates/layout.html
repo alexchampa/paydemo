@@ -58,9 +58,38 @@
 
 <div id="toast-notification" class="toast"></div>
 
+<button id="demo-toggle" class="demo-toggle">
+    Show Details
+</button>
+
+<div id="demo-panel" class="demo-panel">
+    <div class="demo-panel-header">
+        <h3>Demo Workflow</h3>
+    </div>
+    <div class="demo-panel-content">
+        {% block demo_panel_content %}
+            <p>This is the default view. Navigate to a specific page to see a description of the current step.</p>
+        {% endblock %}
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- NEW: CATCH FLASHED MESSAGES AND SHOW AS TOASTS ---
+        
+        const demoToggle = document.getElementById('demo-toggle');
+        const demoPanel = document.getElementById('demo-panel');
+
+        if (demoToggle && demoPanel) {
+            demoToggle.addEventListener('click', () => {
+                // This toggles the panel and returns true if it's now open
+                const isOpen = demoPanel.classList.toggle('is-open');
+                demoToggle.classList.toggle('is-open');
+                
+                // Change the button text based on the panel's state
+                demoToggle.textContent = isOpen ? 'Hide Details' : 'Show Details';
+            });
+        }
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -68,7 +97,6 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        // --- END OF NEW SECTION ---
 
         const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
         addToCartButtons.forEach(button => {
@@ -105,7 +133,6 @@
         }
     }
 
-    // --- UPDATED showToast function ---
     function showToast(message, category = 'success') {
         const toast = document.getElementById('toast-notification');
         toast.textContent = message;
@@ -122,6 +149,7 @@
             toast.classList.remove('show');
         }, 3000);
     }
+
 </script>
 </body>
 </html>
