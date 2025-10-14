@@ -12,19 +12,26 @@
 <body>
     <header class="header">
         <div class="container">
-            <div class="logo">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5z" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                <span>DemoCorp</span>
+            <div class="header-left">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5z" stroke="#0057b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <span>DemoCorp</span>
+                </div>
+                <div class="currency-switcher">
+                    {% for code in CURRENCY_RATES %}
+                        <a href="{{ url_for('set_currency', currency=code) }}" 
+                           class="{{ 'active' if current_currency == code else '' }}">
+                           {{ code }}
+                        </a>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="currency-switcher">
-                {% for code in CURRENCY_RATES %}
-                    <a href="{{ url_for('set_currency', currency=code) }}" 
-                       class="{{ 'active' if current_currency == code else '' }}">
-                       {{ code }}
-                    </a>
-                {% endfor %}
-            </div>
-            <nav>
+
+            <button class="mobile-nav-toggle" aria-controls="primary-navigation" aria-expanded="false">
+                <span class="sr-only">Menu</span>
+            </button>
+
+            <nav id="primary-navigation" data-visible="false">
                 <a href="{{ url_for('index') }}">Products</a>
                 <a href="{{ url_for('view_cart') }}" class="cart-link">Cart 
                     {% set cart_count = session.get('cart', [])|length %}
@@ -32,7 +39,6 @@
                         <span class="cart-badge">{{ cart_count }}</span>
                     {% endif %}
                 </a>
-                
                 <div class="nav-user-area">
                     {% if 'username' in session %}
                         <a href="{{ url_for('profile') }}" class="welcome-user">Hi, {{ session.username }}</a>
@@ -75,6 +81,17 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        
+        const navToggle = document.querySelector('.mobile-nav-toggle');
+        const primaryNav = document.getElementById('primary-navigation');
+
+        if (navToggle && primaryNav) {
+            navToggle.addEventListener('click', () => {
+                const isVisible = primaryNav.getAttribute('data-visible') === 'true';
+                primaryNav.setAttribute('data-visible', !isVisible);
+                navToggle.setAttribute('aria-expanded', !isVisible);
+            });
+        }
         
         const demoToggle = document.getElementById('demo-toggle');
         const demoPanel = document.getElementById('demo-panel');
