@@ -12,21 +12,21 @@ REGIONAL_FAKE_USERS = {
         'reject': {'password': 'password', 'company_name': 'Reject Electricals', 'address': '456 Power Ave, Los Angeles, CA', 'credit_limit': 0.00, 'orders': []},
         'fraud': {'password': 'password', 'company_name': 'Fraudulent Fixtures Inc.', 'address': '789 Shadow St, Los Angeles, CA', 'credit_limit': 10000.00, 'orders': []},
         'otp': {'password': 'password', 'company_name': 'One-Time Parts Co.', 'address': '101 Supply Rd, Los Angeles, CA', 'credit_limit': 25000.00, 'orders': []},
-        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 500.00, 'orders': []},
+        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 0.00, 'orders': []},
     },
     'GBP': {
         'jdoe': {'password': 'password', 'company_name': 'John Smith & Sons Ltd', 'address': '123 High Street, London, UK', 'credit_limit': 40000.00, 'orders': []},
         'reject': {'password': 'password', 'company_name': 'UK Power Solutions', 'address': '456 Victoria Rd, Manchester, UK', 'credit_limit': 0.00, 'orders': []},
         'fraud': {'password': 'password', 'company_name': 'British Imports Co.', 'address': '789 Docklands, Liverpool, UK', 'credit_limit': 8000.00, 'orders': []},
         'otp': {'password': 'password', 'company_name': 'Midlands Parts Ltd', 'address': '101 Industrial Way, Birmingham, UK', 'credit_limit': 20000.00, 'orders': []},
-        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 400.00, 'orders': []},
+        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 0.00, 'orders': []},
     },
     'EUR': {
         'jdoe': {'password': 'password', 'company_name': 'Jean Dupont S.A.', 'address': '123 Rue de la Paix, Paris, France', 'credit_limit': 45000.00, 'orders': []},
         'reject': {'password': 'password', 'company_name': 'Euro-Electric GmbH', 'address': '456 Kurfürstendamm, Berlin, Germany', 'credit_limit': 0.00, 'orders': []},
         'fraud': {'password': 'password', 'company_name': 'Continental Trading', 'address': '789 Via del Corso, Rome, Italy', 'credit_limit': 9000.00, 'orders': []},
         'otp': {'password': 'password', 'company_name': 'Auto Parts España', 'address': '101 Gran Vía, Madrid, Spain', 'credit_limit': 22000.00, 'orders': []},
-        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 450.00, 'orders': []},
+        'guestcheckout': {'password': 'password', 'company_name': None, 'address': None, 'credit_limit': 0.00, 'orders': []},
     }
 }
 
