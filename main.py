@@ -166,9 +166,9 @@ FAKE_PRODUCTS = [
 ]
 
 FAKE_COMPANIES = [
-    {'name': 'Golden State Builders, Inc.', 'address': '123 Market St, San Francisco, CA'},
-    {'name': 'Pacific Crest Construction', 'address': '456 Ocean Ave, Los Angeles, CA'},
-    {'name': 'Sierra Nevada Contractors', 'address': '789 Pine Rd, Lake Tahoe, CA'},
+    {'company_name': 'Golden State Builders, Inc.', 'address': '123 Market St, San Francisco, CA'},
+    {'company_name': 'Pacific Crest Construction', 'address': '456 Ocean Ave, Los Angeles, CA'},
+    {'company_name': 'Sierra Nevada Contractors', 'address': '789 Pine Rd, Lake Tahoe, CA'},
 ]
 
 
@@ -217,7 +217,7 @@ def profile():
     # This block correctly updates user_data for a returning guest
     if username == 'guestcheckout' and 'guest_company_details' in session:
         user_data.update(session['guest_company_details'])
-    
+
     available_credit = get_available_credit(user_data)
     
     # Pass both the base user data and the calculated credit to the template
@@ -369,40 +369,46 @@ def checkout():
             flash('Success! Your order has been placed.', 'success')
             return redirect(url_for('profile'))
 
-    if is_returning_guest:
-        user_data.update(session['guest_company_details'])
+    else:
+        if is_returning_guest:
+            user_data.update(session['guest_company_details'])
 
-    # --- Proceed with existing user-specific workflows ---
-    if username == 'reject':
-        flash('Payment Rejected. Your payment method was declined.', 'error')
-        return redirect(url_for('view_cart'))
+        # --- Proceed with existing user-specific workflows ---
+        if username == 'reject':
+            flash('Payment Rejected. Your payment method was declined.', 'error')
+            return redirect(url_for('view_cart'))
 
-    elif username == 'fraud':
-        company_name = user_data.get('company_name', 'Your Company')
-        flash('For your security, please verify your identity to complete this transaction.', 'info')
-        return redirect(url_for('verify_identity', company_name=company_name))
+        elif username == 'fraud':
+            company_name = user_data.get('company_name', 'Your Company')
+            flash('For your security, please verify your identity to complete this transaction.', 'info')
+            return redirect(url_for('verify_identity', company_name=company_name))
 
-    elif username == 'otp':
-        return redirect(url_for('verify_otp'))
+        elif username == 'otp':
+            return redirect(url_for('verify_otp'))
 
-    else: # This block now handles 'jdoe' AND returning 'guestcheckout' users
-        if session.get('payment_method') == 'allianz':
-            cart_total = get_cart_total()
-            available_credit = get_available_credit(user_data)
-            
-            if cart_total > available_credit:
-                flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
-                return redirect(url_for('view_cart'))
+        else: # This block now handles 'jdoe' AND returning 'guestcheckout' users
+
+            if session.get('payment_method') == 'allianz':
+                cart_total = get_cart_total()
+                available_credit = get_available_credit(user_data)
+                
+                # check if the user is guest and session['id_verified'] is False
+                if username == 'guestcheckout' and 'id_verified' in session and not session['id_verified']:
+                    return redirect(url_for('verify_otp'))
+
+                if cart_total > available_credit:
+                    flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
+                    return redirect(url_for('view_cart'))
+                else:
+                    create_new_order(username)
+                    session.pop('cart', None)
+                    flash('Success! Your order has been placed on account.', 'success')
+                    return redirect(url_for('profile'))
             else:
                 create_new_order(username)
                 session.pop('cart', None)
                 flash('Success! Your order has been placed on account.', 'success')
                 return redirect(url_for('profile'))
-        else:
-            create_new_order(username)
-            session.pop('cart', None)
-            flash('Success! Your order has been placed on account.', 'success')
-            return redirect(url_for('profile'))
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 @login_required
@@ -515,11 +521,13 @@ def verification_success():
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
 
+    session['id_verified'] = True
+
     # If guest user, save their selected company info and new credit limit
     if username == 'guestcheckout':
         company_name = session.pop('verifying_company_name', None) # Get and clear the temp name
         if company_name:
-            company_data = next((c for c in FAKE_COMPANIES if c['name'] == company_name), None)
+            company_data = next((c for c in FAKE_COMPANIES if c['company_name'] == company_name), None)
             if company_data:
                 # Save the company details with the approved credit limit
                 session['guest_company_details'] = company_data
@@ -548,6 +556,9 @@ def verification_success():
 def verification_failed():
     """Handles a failed verification, saving company info and setting credit to $0."""
     username = session.get('username')
+
+    session['id_verified'] = False
+
     if username not in ['guestcheckout', 'fraud']:
         return redirect(url_for('login'))
 
@@ -555,7 +566,7 @@ def verification_failed():
     if username == 'guestcheckout':
         company_name = session.pop('verifying_company_name', None) # Get and clear the temp name
         if company_name:
-            company_data = next((c for c in FAKE_COMPANIES if c['name'] == company_name), None)
+            company_data = next((c for c in FAKE_COMPANIES if c['company_name'] == company_name), None)
             if company_data:
                 # Save the company details with a zero credit limit
                 session['guest_company_details'] = company_data
