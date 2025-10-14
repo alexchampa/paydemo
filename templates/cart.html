@@ -85,19 +85,14 @@
         </div>
     </div>
 
-    <script>
+<script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Functions from layout.html that we need ---
-        // (We are including them here to make the cart page self-sufficient)
+        // --- HELPER FUNCTIONS ---
         function updateCartBadge(count) {
             const badge = document.querySelector('.cart-badge');
             if (badge) {
                 badge.textContent = count;
-                if (count > 0) {
-                    badge.style.display = 'inline-block';
-                } else {
-                    badge.style.display = 'none';
-                }
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
             } else if (count > 0) {
                 const cartLink = document.querySelector('.cart-link');
                 if(cartLink) {
@@ -113,15 +108,40 @@
             const toast = document.getElementById('toast-notification');
             if (!toast) return;
             toast.textContent = message;
-            toast.className = 'toast show'; // Use className to reset classes
+            toast.className = 'toast show';
             setTimeout(() => {
                 toast.className = toast.className.replace('show', '');
             }, 3000);
         }
+        
+        function updateCartOnServer(productId, quantity) {
+            fetch('/update_cart', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, quantity: quantity }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Server response:', data.message);
+                    updateCartBadge(data.cart_count);
+                    
+                    const grandTotalEl = document.getElementById('grand-total');
+                    if(grandTotalEl) grandTotalEl.textContent = `$${data.new_total.toFixed(2)}`;
+                    
+                    if (data.cart_count === 0) {
+                        document.querySelector('.cart-container').innerHTML = `
+                            <h1 class="cart-title">Your Shopping Cart</h1>
+                            <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
+                        `;
+                    }
+                }
+            })
+            .catch((error) => console.error('Error:', error));
+        }
 
-        // --- Payment Modal Logic (Unchanged) ---
+        // --- PAYMENT MODAL LOGIC ---
         const showModalBtn = document.getElementById('show-payment-modal-btn');
-        // ... (rest of your existing modal javascript, it's included below)
         const paymentModal = document.getElementById('payment-modal-overlay');
         const cancelBtn = document.getElementById('cancel-payment-btn');
         const confirmBtn = document.getElementById('confirm-payment-btn');
@@ -154,100 +174,44 @@
              confirmBtn.href = `${baseUrl}?method=${selectedMethod}`;
         }
         
-        // --- Quantity Update Logic (Unchanged) ---
-        const quantityInputs = document.querySelectorAll('.quantity-input');
-        // ... (this logic remains the same, it's included below)
-        quantityInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                // ... (quantity update code)
-            });
-        });
-        function updateGrandTotal() { /* ... */ }
-        function updateCartOnServer(productId, quantity) { /* ... */ }
-
-
-        // --- NEW: Remove from Cart Logic ---
-        document.querySelectorAll('.remove-link').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                const url = e.target.href;
-
-                fetch(url, { method: 'POST' })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            // 1. Remove the item row from the page
-                            const itemRow = e.target.closest('.cart-item');
-                            if (itemRow) itemRow.remove();
-                            
-                            // 2. Update the grand total by running the calculation again
-                            updateGrandTotal();
-                            
-                            // 3. Update the header badge
-                            updateCartBadge(data.cart_count);
-                            
-                            // 4. Show the new toast message
-                            showToast(data.message);
-                            
-                            // 5. If cart is now empty, show the empty message
-                            if (data.cart_count === 0) {
-                                document.querySelector('.cart-container').innerHTML = `
-                                    <h1 class="cart-title">Your Shopping Cart</h1>
-                                    <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
-                                `;
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error:', error));
-            });
-        });
-        
-        // --- Make sure to include the full quantity logic here as well ---
-        // (The code from the previous step is included for completeness)
-        quantityInputs.forEach(input => {
+        // --- QUANTITY INPUT LOGIC (FIXED) ---
+        document.querySelectorAll('.quantity-input').forEach(input => {
             input.addEventListener('change', (e) => {
                 const newQuantity = parseInt(e.target.value);
                 const price = parseFloat(e.target.dataset.price);
                 const productId = e.target.dataset.productId;
                 
-                const subtotalEl = document.querySelector(`[data-subtotal-for="${productId}"]`);
-                if (subtotalEl) subtotalEl.textContent = `$${(newQuantity * price).toFixed(2)}`;
+                // This is the corrected way to find the subtotal element reliably
+                const itemRow = e.target.closest('.cart-item');
+                const subtotalEl = itemRow.querySelector('.cart-item-price');
                 
-                updateGrandTotal();
-
+                if (subtotalEl) {
+                    subtotalEl.textContent = `$${(newQuantity * price).toFixed(2)}`;
+                }
+                
                 if (newQuantity === 0) {
-                    const itemRow = e.target.closest('.cart-item');
-                    if (itemRow) itemRow.remove();
-                    if (document.querySelectorAll('.cart-item').length === 1) { // Check if it was the last item
-                         document.querySelector('.cart-container').innerHTML = `
-                            <h1 class="cart-title">Your Shopping Cart</h1>
-                            <p>Your cart is currently empty. Browse our <a href="{{ url_for('index') }}">products</a>.</p>
-                        `;
-                    }
+                    itemRow.remove();
                 }
                 
                 updateCartOnServer(productId, newQuantity);
             });
         });
-        function updateGrandTotal() {
-            let total = 0;
-            document.querySelectorAll('.cart-item-price').forEach(subtotalEl => {
-                total += parseFloat(subtotalEl.textContent.replace('$', ''));
-            });
-            const grandTotalEl = document.getElementById('grand-total');
-            if (grandTotalEl) grandTotalEl.textContent = `$${total.toFixed(2)}`;
-        }
-        function updateCartOnServer(productId, quantity) {
-            fetch('/update_cart', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: productId, quantity: quantity }),
-            })
-            .then(response => response.json())
-            .then(data => console.log('Server response:', data.message))
-            .catch((error) => console.error('Error:', error));
-        }
 
+        // --- REMOVE BUTTON LOGIC ---
+        document.querySelectorAll('.remove-link').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                fetch(e.target.href, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            window.location.reload(); // Reloads to show correct state
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            });
+        });
     });
 </script>
+    
 {% endblock %}

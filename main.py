@@ -207,21 +207,22 @@ def set_currency(currency):
     # Redirect back to the page the user was on
     return redirect(request.referrer or url_for('index'))
 
+
 @app.route('/profile')
 @login_required
 def profile():
     username = session['username']
-    # Make a copy of the user data so we can modify it safely
     user_data = FAKE_USERS.get(username).copy()
 
-    # If the user is 'guestcheckout' and has chosen a company,
-    # override the profile data with the info from the session.
+    # This block correctly updates user_data for a returning guest
     if username == 'guestcheckout' and 'guest_company_details' in session:
-        user_data['company_name'] = session['guest_company_details']['name']
-        user_data['address'] = session['guest_company_details']['address']
-        user_data['credit_limit'] = session['guest_company_details']['credit_limit']
+        user_data.update(session['guest_company_details'])
+    
+    available_credit = get_available_credit(user_data)
+    
+    # Pass both the base user data and the calculated credit to the template
+    return render_template('profile.html', user=user_data, available_credit=available_credit)
 
-    return render_template('profile.html', user=user_data)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -349,43 +350,59 @@ def remove_from_cart(product_id):
 @app.route('/checkout')
 @login_required
 def checkout():
-    # The 'if username not in session' check is handled by the decorator
     payment_method = request.args.get('method', 'Unknown')
     session['payment_method'] = payment_method
     
     username = session.get('username')
+    user_data = FAKE_USERS.get(username, {}).copy() # Get a mutable copy
 
-    # --- Logic for specific user types ---
+    is_returning_guest = username == 'guestcheckout' and 'guest_company_details' in session
+
+    if username == 'guestcheckout' and not is_returning_guest:
+        # This logic now only applies to a NEW guest checkout user
+        if session.get('payment_method') == 'allianz':
+            return redirect(url_for('verify_otp'))
+        else:
+            # A new guest using CC or ACH checks out immediately
+            create_new_order(username)
+            session.pop('cart', None)
+            flash('Success! Your order has been placed.', 'success')
+            return redirect(url_for('profile'))
+
+    if is_returning_guest:
+        user_data.update(session['guest_company_details'])
+
+    # --- Proceed with existing user-specific workflows ---
     if username == 'reject':
         flash('Payment Rejected. Your payment method was declined.', 'error')
         return redirect(url_for('view_cart'))
 
     elif username == 'fraud':
-        user_data = FAKE_USERS.get(username)
         company_name = user_data.get('company_name', 'Your Company')
         flash('For your security, please verify your identity to complete this transaction.', 'info')
         return redirect(url_for('verify_identity', company_name=company_name))
 
     elif username == 'otp':
         return redirect(url_for('verify_otp'))
-        
-    elif username == 'guestcheckout':
-        # It checks which payment method the guest user selected.
+
+    else: # This block now handles 'jdoe' AND returning 'guestcheckout' users
         if session.get('payment_method') == 'allianz':
-            # **Only if Allianz is chosen**, start the multi-step verification.
-            return redirect(url_for('verify_otp'))
+            cart_total = get_cart_total()
+            available_credit = get_available_credit(user_data)
+            
+            if cart_total > available_credit:
+                flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
+                return redirect(url_for('view_cart'))
+            else:
+                create_new_order(username)
+                session.pop('cart', None)
+                flash('Success! Your order has been placed on account.', 'success')
+                return redirect(url_for('profile'))
         else:
-            # **For all other methods (Credit Card, ACH)**, the transaction succeeds instantly.
             create_new_order(username)
             session.pop('cart', None)
-            flash('Success! Your order has been placed.', 'success')
+            flash('Success! Your order has been placed on account.', 'success')
             return redirect(url_for('profile'))
-
-    else: 
-        create_new_order(username)
-        session.pop('cart', None)
-        flash('Success! Your order has been placed on account.', 'success')
-        return redirect(url_for('profile'))
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 @login_required
@@ -408,6 +425,19 @@ def verify_otp():
                 flash('Invalid OTP code. Please try again.', 'error')
         elif username == 'otp':
             if otp_code == '1234':
+                if session.get('payment_method') == 'allianz':
+                    cart_total = get_cart_total()
+                    username = session.get('username')
+                    user_data = FAKE_USERS.get(username, {}).copy() # Get a mutable copy
+
+                    is_returning_guest = username == 'guestcheckout' and 'guest_company_details' in session
+                    if is_returning_guest:
+                        user_data.update(session['guest_company_details'])
+                    available_credit = get_available_credit(user_data)
+                    
+                    if cart_total > available_credit:
+                        flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
+                        return redirect(url_for('view_cart'))
                 create_new_order(username) # Add the order to history
                 session.pop('cart', None)
                 flash('Payment verified and order confirmed!', 'success')
@@ -495,6 +525,19 @@ def verification_success():
                 session['guest_company_details'] = company_data
                 session['guest_company_details']['credit_limit'] = 10000.00
 
+    if session.get('payment_method') == 'allianz':
+        cart_total = get_cart_total()
+        username = session.get('username')
+        user_data = FAKE_USERS.get(username, {}).copy() # Get a mutable copy
+
+        is_returning_guest = username == 'guestcheckout' and 'guest_company_details' in session
+        if is_returning_guest:
+            user_data.update(session['guest_company_details'])
+        available_credit = get_available_credit(user_data)
+        
+        if cart_total > available_credit:
+            flash(f"Credit limit exceeded. Your available credit is {available_credit:,.2f} but the order total is {cart_total:,.2f}.", 'error')
+            return redirect(url_for('view_cart'))
     create_new_order(username)
     session.pop('cart', None) 
     flash('Verification successful! Your order has been confirmed.', 'success')
@@ -521,7 +564,9 @@ def verification_failed():
     flash('Verification failed. Your order was not processed. Please contact support.', 'error')
     return redirect(url_for('view_cart'))
 
+
 @app.route('/update_cart', methods=['POST'])
+@login_required
 def update_cart():
     data = request.get_json()
     product_id = int(data.get('product_id'))
@@ -530,25 +575,51 @@ def update_cart():
     if 'cart' in session and product_id and new_quantity is not None:
         cart_items = session['cart']
         
-        # Count current quantity
         current_quantity = cart_items.count(product_id)
-        
-        # Calculate the difference
         diff = new_quantity - current_quantity
         
-        if diff > 0: # Add items
+        if diff > 0:
             for _ in range(diff):
                 cart_items.append(product_id)
-        elif diff < 0: # Remove items
+        elif diff < 0:
             for _ in range(abs(diff)):
                 if product_id in cart_items:
                     cart_items.remove(product_id)
         
         session.modified = True
-        return jsonify({'status': 'success', 'message': 'Cart updated'})
+
+        # Return the new cart count and total price
+        return jsonify({
+            'status': 'success',
+            'message': 'Cart updated',
+            'cart_count': len(session['cart']),
+            'new_total': get_cart_total() # Use your helper function
+        })
 
     return jsonify({'status': 'error', 'message': 'Invalid request'}), 400
 
+
+def get_cart_total():
+    """Calculates the total price of all items currently in the session cart."""
+    total_price = 0
+    for product_id in session.get('cart', []):
+        product = next((p for p in FAKE_PRODUCTS if p['id'] == product_id), None)
+        if product:
+            total_price += product['price']
+    return total_price
+
+def get_available_credit(user_data):
+    """Calculates a user's available credit by subtracting their Allianz orders."""
+    # Start with the user's base credit limit
+    initial_credit = user_data.get('credit_limit', 0)
+    
+    # Sum up the total of past orders paid for with Allianz Trade Pay
+    spent_credit = sum(
+        order['total'] for order in user_data.get('orders', [])
+        if order.get('payment_method') == 'Allianz'
+    )
+    
+    return initial_credit - spent_credit
 
 
 if __name__ == '__main__':
