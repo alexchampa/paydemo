@@ -1,5 +1,19 @@
 {% extends "layout.html" %}
 
+{% block demo_panel_content %}
+    <h3>Welcome to the B2B Demo!</h3>
+    <p>This is the main product page where you can begin to explore the demo's features.</p>
+    
+    <h4>1. Select a Currency 💶</h4>
+    <p>Use the <strong>currency switcher (USD/GBP/EUR)</strong> in the header. Changing the currency will regionalize the entire demo, updating the available login accounts and company data to match that region.</p>
+
+    <h4>2. Start Shopping 🛒</h4>
+    <p>Browse the products on this page and add items to your cart. You can click on any product to view its details page with customer reviews.</p>
+    
+    <h4>3. Login Workflow 🔑</h4>
+    <p>You can log in at any time using the button in the header. If you proceed to checkout without being logged in, the system will automatically prompt you to authenticate before completing the purchase.</p>
+{% endblock %}
+
 {% block content %}
     <div class="product-grid">
         {% for product in products %}

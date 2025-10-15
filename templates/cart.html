@@ -2,12 +2,20 @@
 
 {% block demo_panel_content %}
     <h3>Step: Shopping Cart</h3>
-    <p>This page demonstrates several dynamic features:</p>
+    <p>This page demonstrates the dynamic features of the cart and serves as the entry point into the various B2B checkout flows.</p>
+    
+    <h4>Real-Time Editing ✏️</h4>
+    <p>You can edit the quantity for any item in your cart. All prices will update automatically without a page reload, and the changes are saved to your session in the background.</p>
+
+    <h4>Dynamic Checkout Workflows ⚙️</h4>
+    <p>When you click <strong>Checkout</strong>, you will be redirected to the login page if you aren't already logged in. After authenticating, the system triggers a different workflow based on your user profile:</p>
     <ul>
-        <li><strong>Editable Quantities:</strong> Change the number in the input field to see the subtotal and grand total update instantly.</li>
-        <li><strong>AJAX Updates:</strong> All changes (quantity updates, removing items) are sent to the server in the background without a page reload.</li>
+        <li><strong>jdoe:</strong> As a standard registered user, the purchase is approved without further verification.</li>
+        <li><strong>fraud:</strong> This user is flagged and must go through an identity verification step before the purchase is approved.</li>
+        <li><strong>otp:</strong> This user is prompted to enter a 4-digit code to simulate two-factor authentication.</li>
+        <li><strong>reject:</strong> This user's transaction is automatically declined by the system.</li>
+        <li><strong>guestcheckout:</strong> This user is guided through the full onboarding process, including OTP, company verification, and a final identity check.</li>
     </ul>
-    <p>Clicking "Checkout" opens the payment modal, which is the entry point for the various user-specific checkout flows.</p>
 {% endblock %}
 
 {% block content %}
